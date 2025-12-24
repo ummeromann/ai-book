@@ -1,14 +1,12 @@
 {
-  "name": "ai-book",
+  "name": "ai-book-root",
   "version": "1.0.0",
   "private": true,
-  "description": "AI Book - Physical AI & Humanoid Robotics",
+  "description": "AI Book - Physical AI & Humanoid Robotics - Root Workspace",
   "scripts": {
-    "install": "cd frontend && npm install",
-    "build": "cd frontend && npm run build",
-    "start": "cd frontend && npm start",
-    "serve": "cd frontend && npm run serve",
-    "clear": "cd frontend && npm run clear"
+    "build": "npm run build --workspace=frontend",
+    "start": "npm run start --workspace=frontend",
+    "serve": "npm run serve --workspace=frontend"
   },
   "repository": {
     "type": "git",
