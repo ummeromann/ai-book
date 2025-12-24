@@ -8,10 +8,11 @@ const config: Config = {
   favicon: 'img/favicon.ico',
 
   // Use environment variables to support both Vercel and GitHub Pages
-  url: process.env.VERCEL_URL
-    ? `https://${process.env.VERCEL_URL}`
+  // Vercel sets VERCEL=1, GitHub Actions doesn't set this variable
+  url: process.env.VERCEL
+    ? 'https://ai-book-nine-mocha.vercel.app'
     : 'https://ummeromann.github.io',
-  baseUrl: process.env.VERCEL ? '/' : '/ai-book/',
+  baseUrl: process.env.VERCEL === '1' ? '/' : '/ai-book/',
 
   organizationName: 'ummeromann',
   projectName: 'ai-book',
