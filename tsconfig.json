@@ -1,0 +1,16 @@
+{
+  "compilerOptions": {
+    "baseUrl": ".",
+    "module": "ESNext",
+    "target": "ESNext",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "jsx": "react-jsx",
+    "types": ["node", "@docusaurus/module-type-aliases"],
+    "ignoreDeprecations": "6.0"
+  },
+  "include": ["src/**/*", "docusaurus.config.ts", "sidebars.ts"]
+}

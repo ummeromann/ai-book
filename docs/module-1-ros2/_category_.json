@@ -1,0 +1,8 @@
+{
+  "label": "Module 1: ROS 2 Middleware",
+  "position": 2,
+  "link": {
+    "type": "doc",
+    "id": "module-1-ros2/index"
+  }
+}
