@@ -7,8 +7,11 @@ const config: Config = {
   tagline: 'Embodied Intelligence in the Real World',
   favicon: 'img/favicon.ico',
 
-  url: 'https://ummeromann.github.io',
-  baseUrl: '/ai-book/',
+  // Use environment variables to support both Vercel and GitHub Pages
+  url: process.env.VERCEL_URL
+    ? `https://${process.env.VERCEL_URL}`
+    : 'https://ummeromann.github.io',
+  baseUrl: process.env.VERCEL ? '/' : '/ai-book/',
 
   organizationName: 'ummeromann',
   projectName: 'ai-book',
