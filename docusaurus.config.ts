@@ -7,11 +7,11 @@ const config: Config = {
   tagline: 'Embodied Intelligence in the Real World',
   favicon: 'img/favicon.ico',
 
-  url: 'https://your-docusaurus-site.example.com',
-  baseUrl: '/',
+  url: 'https://ummeromann.github.io',
+  baseUrl: '/ai-book/',
 
-  organizationName: 'ai-book',
-  projectName: 'physical-ai-humanoid-robotics',
+  organizationName: 'ummeromann',
+  projectName: 'ai-book',
 
   onBrokenLinks: 'throw',
   onBrokenMarkdownLinks: 'warn',
@@ -34,7 +34,7 @@ const config: Config = {
         docs: {
           sidebarPath: './sidebars.ts',
           routeBasePath: '/',
-          editUrl: 'https://github.com/ai-book/physical-ai-humanoid-robotics/tree/main/',
+          editUrl: 'https://github.com/ummeromann/ai-book/tree/main/',
         },
         blog: false,
         theme: {
@@ -60,7 +60,7 @@ const config: Config = {
           label: 'Book',
         },
         {
-          href: 'https://github.com/ai-book/physical-ai-humanoid-robotics',
+          href: 'https://github.com/ummeromann/ai-book',
           label: 'GitHub',
           position: 'right',
         },
@@ -87,7 +87,7 @@ const config: Config = {
           items: [
             {
               label: 'GitHub',
-              href: 'https://github.com/ai-book/physical-ai-humanoid-robotics',
+              href: 'https://github.com/ummeromann/ai-book',
             },
           ],
         },
