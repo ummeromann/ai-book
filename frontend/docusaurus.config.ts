@@ -10,6 +10,7 @@ const config: Config = {
   // Primary deployment is Vercel, so use '/' as baseUrl
   url: 'https://ai-book-nine-mocha.vercel.app',
   baseUrl: '/',
+  trailingSlash: false,
 
   organizationName: 'ummeromann',
   projectName: 'ai-book',
