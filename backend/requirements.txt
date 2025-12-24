@@ -1,0 +1,31 @@
+# FastAPI and ASGI server
+fastapi==0.109.0
+uvicorn[standard]==0.27.0
+python-multipart==0.0.6
+
+# OpenAI and LLM
+openai==1.12.0
+
+# Vector database
+qdrant-client==1.7.3
+
+# PostgreSQL
+psycopg2-binary==2.9.9
+sqlalchemy==2.0.25
+asyncpg==0.29.0
+
+# Text processing and embeddings
+tiktoken==0.5.2
+langchain==0.1.6
+langchain-openai==0.0.5
+
+# Environment and configuration
+python-dotenv==1.0.1
+pydantic==2.6.0
+pydantic-settings==2.1.0
+
+# CORS and middleware
+python-jose[cryptography]==3.3.0
+
+# Utilities
+aiofiles==23.2.1

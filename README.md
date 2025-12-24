@@ -2,16 +2,38 @@
 
 Comprehensive educational resource covering Physical AI, Humanoid Robotics, and Embodied Intelligence.
 
+## ✨ New Feature: RAG-Powered Chatbot
+
+This book now includes an intelligent **RAG (Retrieval-Augmented Generation) chatbot** that can answer questions about the book content!
+
+### Features:
+- 💬 **Full-Book Q&A**: Ask questions and get answers from the entire book
+- 📝 **Selected-Text Q&A**: Select specific text and ask questions about just that selection
+- 🔍 **Source Citations**: Every answer includes references to the relevant book sections
+- 💾 **Conversation History**: Your chat sessions are saved for later reference
+
+### How It Works:
+1. **Click the floating chat button** (bottom-right corner)
+2. **Ask general questions** about any topic in the book, OR
+3. **Select text** in the book and click "Ask Selected" to focus on that specific content
+4. The AI assistant answers strictly from the book content - no hallucinations!
+
 ## 🏗️ Project Structure
 
 ```
 ai-book/
 ├── frontend/          # Docusaurus documentation site
 │   ├── docs/         # Documentation content
-│   ├── src/          # Custom components
+│   ├── src/          # Custom components (includes ChatBot)
 │   ├── static/       # Static assets
 │   └── README.md     # Frontend-specific documentation
-├── backend/          # Backend services (planned)
+├── backend/          # FastAPI RAG service
+│   ├── app/          # Application code
+│   │   ├── main.py           # FastAPI endpoints
+│   │   ├── rag_service.py    # RAG logic
+│   │   ├── database.py       # Database models
+│   │   └── config.py         # Configuration
+│   ├── requirements.txt      # Python dependencies
 │   └── README.md     # Backend documentation
 ├── .github/          # GitHub Actions workflows
 ├── .claude/          # Claude Code configurations
@@ -34,9 +56,52 @@ npm start
 
 Visit http://localhost:3000 to view the site.
 
-### Backend
+### Backend (RAG Chatbot API)
 
-*Coming soon - backend services will be added here*
+1. **Install dependencies:**
+   ```bash
+   cd backend
+   pip install -r requirements.txt
+   ```
+
+2. **Configure environment:**
+   ```bash
+   cp .env.example .env
+   # Edit .env with your API keys and database credentials
+   ```
+
+3. **Start the backend:**
+   ```bash
+   python run.py
+   ```
+
+4. **Ingest book content:**
+   ```bash
+   curl -X POST http://localhost:8000/ingest \
+     -H "Content-Type: application/json" \
+     -d '{"content_path": "../frontend/docs", "force_reingest": false}'
+   ```
+
+The API will be available at http://localhost:8000 (docs at `/docs`)
+
+### RAG Architecture
+
+```
+┌─────────────┐     ┌──────────────┐     ┌─────────────┐
+│  Frontend   │────▶│  FastAPI     │────▶│   OpenAI    │
+│ (Docusaurus)│     │   Backend    │     │  (GPT-4)    │
+└─────────────┘     └──────────────┘     └─────────────┘
+                           │
+                           ├──────▶ Qdrant Cloud (Vectors)
+                           │
+                           └──────▶ Neon Postgres (Metadata)
+```
+
+**Technologies:**
+- **Vector Search**: Qdrant Cloud (free tier)
+- **Database**: Neon Serverless Postgres
+- **LLM**: OpenAI GPT-4 (answer generation)
+- **Embeddings**: OpenAI text-embedding-3-small
 
 ## 📚 Content Modules
 
