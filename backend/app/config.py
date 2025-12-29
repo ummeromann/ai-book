@@ -19,11 +19,6 @@ class Settings(BaseSettings):
     # Neon Postgres
     database_url: str
 
-    # Authentication
-    jwt_secret_key: str
-    jwt_algorithm: str = "HS256"
-    access_token_expire_days: int = 7
-
     # RAG Settings
     chunk_size: int = 1000
     chunk_overlap: int = 200
@@ -31,9 +26,6 @@ class Settings(BaseSettings):
 
     # CORS
     allowed_origins: str = "http://localhost:3000"
-
-    # Demo Mode (no OpenAI required)
-    demo_mode: bool = False
 
     @property
     def origins_list(self) -> List[str]:

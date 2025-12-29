@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useAuth } from '../context/AuthContext';
 import styles from './ChatBot.module.css';
 
 interface Message {
@@ -13,7 +12,6 @@ interface ChatBotProps {
 }
 
 const ChatBot: React.FC<ChatBotProps> = ({ apiBaseUrl = 'http://localhost:8000' }) => {
-  const { accessToken } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
@@ -66,18 +64,11 @@ const ChatBot: React.FC<ChatBotProps> = ({ apiBaseUrl = 'http://localhost:8000' 
             max_results: 5,
           };
 
-      const headers: HeadersInit = {
-        'Content-Type': 'application/json',
-      };
-
-      // Add auth token if available for personalized responses
-      if (accessToken) {
-        headers['Authorization'] = `Bearer ${accessToken}`;
-      }
-
       const response = await fetch(`${apiBaseUrl}${endpoint}`, {
         method: 'POST',
-        headers,
+        headers: {
+          'Content-Type': 'application/json',
+        },
         body: JSON.stringify(payload),
       });
 

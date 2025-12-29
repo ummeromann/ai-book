@@ -2,46 +2,21 @@
 
 Comprehensive educational resource covering Physical AI, Humanoid Robotics, and Embodied Intelligence.
 
-## ✨ New Features
+## ✨ New Feature: RAG-Powered Chatbot
 
-### 🔐 User Authentication & Personalized Learning
+This book now includes an intelligent **RAG (Retrieval-Augmented Generation) chatbot** that can answer questions about the book content!
 
-The book now includes **user authentication and personalized learning** powered by your profile!
-
-#### Features:
-- 👤 **User Accounts**: Sign up and sign in with email/password
-- 📊 **Learning Profile**: Tell us about your background (software skills, AI experience, hardware)
-- 🎯 **Personalized Responses**: The chatbot adapts answers to your skill level and goals
-- 💾 **Saved Progress**: Your profile and chat history are stored securely
-
-#### How It Works:
-1. **Sign up** using the "Sign Up" button (top-right corner)
-2. **Fill out your profile** with:
-   - Software level (Beginner/Intermediate/Advanced)
-   - Programming languages you know (Python, JavaScript, ROS, etc.)
-   - AI/ML experience level
-   - Hardware available (GPU, Jetson, etc.)
-   - Learning goals
-3. **Get personalized answers** from the chatbot based on your profile
-4. **Update your profile anytime** by clicking your email in the top-right
-
-### 💬 RAG-Powered Chatbot
-
-The book includes an intelligent **RAG (Retrieval-Augmented Generation) chatbot** that can answer questions about the book content!
-
-#### Features:
+### Features:
 - 💬 **Full-Book Q&A**: Ask questions and get answers from the entire book
 - 📝 **Selected-Text Q&A**: Select specific text and ask questions about just that selection
 - 🔍 **Source Citations**: Every answer includes references to the relevant book sections
 - 💾 **Conversation History**: Your chat sessions are saved for later reference
-- 🎯 **Personalized Explanations**: Answers adapt to your skill level (when signed in)
 
-#### How It Works:
+### How It Works:
 1. **Click the floating chat button** (bottom-right corner)
 2. **Ask general questions** about any topic in the book, OR
 3. **Select text** in the book and click "Ask Selected" to focus on that specific content
 4. The AI assistant answers strictly from the book content - no hallucinations!
-5. **Signed-in users** get responses tailored to their background and learning goals
 
 ## 🏗️ Project Structure
 
@@ -91,26 +66,8 @@ Visit http://localhost:3000 to view the site.
 
 2. **Configure environment:**
    ```bash
-   # Create .env file in backend/ directory with:
-
-   # OpenAI Configuration
-   OPENAI_API_KEY=your-openai-api-key
-
-   # Qdrant Configuration
-   QDRANT_URL=your-qdrant-url
-   QDRANT_API_KEY=your-qdrant-api-key
-   QDRANT_COLLECTION_NAME=physical_ai_book
-
-   # Neon Postgres Configuration
-   DATABASE_URL=postgresql+psycopg://user:pass@host/db
-
-   # Authentication Settings (IMPORTANT: Change JWT_SECRET_KEY in production!)
-   JWT_SECRET_KEY=your-super-secret-jwt-key-min-32-characters
-   JWT_ALGORITHM=HS256
-   ACCESS_TOKEN_EXPIRE_DAYS=7
-
-   # CORS Settings
-   ALLOWED_ORIGINS=http://localhost:3000,https://your-production-url.com
+   cp .env.example .env
+   # Edit .env with your API keys and database credentials
    ```
 
 3. **Start the backend:**
@@ -127,28 +84,23 @@ Visit http://localhost:3000 to view the site.
 
 The API will be available at http://localhost:8000 (docs at `/docs`)
 
-### Architecture
+### RAG Architecture
 
 ```
-┌─────────────┐     ┌──────────────────────┐     ┌─────────────┐
-│  Frontend   │────▶│  FastAPI Backend     │────▶│   OpenAI    │
-│ (Docusaurus)│     │  - RAG Service       │     │  (GPT-4)    │
-│             │     │  - Authentication    │     └─────────────┘
-│             │     │  - Personalization   │
-└─────────────┘     └──────────────────────┘
+┌─────────────┐     ┌──────────────┐     ┌─────────────┐
+│  Frontend   │────▶│  FastAPI     │────▶│   OpenAI    │
+│ (Docusaurus)│     │   Backend    │     │  (GPT-4)    │
+└─────────────┘     └──────────────┘     └─────────────┘
                            │
                            ├──────▶ Qdrant Cloud (Vectors)
                            │
-                           └──────▶ Neon Postgres (Users, Profiles, Metadata)
+                           └──────▶ Neon Postgres (Metadata)
 ```
 
 **Technologies:**
-- **Frontend**: React, TypeScript, Docusaurus
-- **Backend**: FastAPI, Python
 - **Vector Search**: Qdrant Cloud (free tier)
 - **Database**: Neon Serverless Postgres
-- **Authentication**: JWT tokens with bcrypt password hashing
-- **LLM**: OpenAI GPT-4 (answer generation with personalization)
+- **LLM**: OpenAI GPT-4 (answer generation)
 - **Embeddings**: OpenAI text-embedding-3-small
 
 ## 📚 Content Modules

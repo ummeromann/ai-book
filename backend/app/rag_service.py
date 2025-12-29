@@ -7,7 +7,7 @@ from pathlib import Path
 from openai import OpenAI
 from qdrant_client import QdrantClient
 from qdrant_client.models import Distance, VectorParams, PointStruct, Filter, FieldCondition, MatchValue
-from langchain_text_splitters import RecursiveCharacterTextSplitter
+from langchain.text_splitter import RecursiveCharacterTextSplitter
 from sqlalchemy.orm import Session
 
 from app.config import settings
@@ -19,33 +19,18 @@ class RAGService:
 
     def __init__(self):
         """Initialize RAG service with Qdrant and OpenAI clients."""
-        import logging
-        logger = logging.getLogger("uvicorn")
-
-        self.demo_mode = settings.demo_mode
-        logger.info(f"RAGService initializing with demo_mode={self.demo_mode}")
-
-        if self.demo_mode:
-            # Demo mode - no external services needed
-            logger.info("Demo mode enabled - skipping OpenAI and Qdrant initialization")
-            self.openai_client = None
-            self.qdrant_client = None
-            self.collection_name = None
-            self.text_splitter = None
-        else:
-            logger.info("Production mode - initializing OpenAI and Qdrant clients")
-            self.openai_client = OpenAI(api_key=settings.openai_api_key)
-            self.qdrant_client = QdrantClient(
-                url=settings.qdrant_url,
-                api_key=settings.qdrant_api_key,
-            )
-            self.collection_name = settings.qdrant_collection_name
-            self.text_splitter = RecursiveCharacterTextSplitter(
-                chunk_size=settings.chunk_size,
-                chunk_overlap=settings.chunk_overlap,
-                length_function=len,
-            )
-            self._ensure_collection()
+        self.openai_client = OpenAI(api_key=settings.openai_api_key)
+        self.qdrant_client = QdrantClient(
+            url=settings.qdrant_url,
+            api_key=settings.qdrant_api_key,
+        )
+        self.collection_name = settings.qdrant_collection_name
+        self.text_splitter = RecursiveCharacterTextSplitter(
+            chunk_size=settings.chunk_size,
+            chunk_overlap=settings.chunk_overlap,
+            length_function=len,
+        )
+        self._ensure_collection()
 
     def _ensure_collection(self):
         """Ensure Qdrant collection exists."""
@@ -147,7 +132,7 @@ class RAGService:
             # Update or create database entry
             if existing_entry:
                 existing_entry.content_hash = content_hash
-                existing_entry.content_metadata = metadata
+                existing_entry.metadata = metadata
             else:
                 new_entry = BookContent(
                     file_path=str(md_file),
@@ -155,7 +140,7 @@ class RAGService:
                     module=metadata.get("module"),
                     chapter=metadata.get("chapter"),
                     content_hash=content_hash,
-                    content_metadata=metadata,
+                    metadata=metadata,
                 )
                 db.add(new_entry)
 
@@ -235,8 +220,7 @@ class RAGService:
         self,
         query: str,
         context_chunks: List[Dict[str, Any]],
-        selected_text: Optional[str] = None,
-        user_context: Optional[Dict[str, Any]] = None
+        selected_text: Optional[str] = None
     ) -> str:
         """
         Generate answer using OpenAI based on retrieved context.
@@ -245,25 +229,10 @@ class RAGService:
             query: User query
             context_chunks: Retrieved context chunks
             selected_text: Optional selected text for focused answering
-            user_context: Optional user profile context for personalization
 
         Returns:
             Generated answer
         """
-        # Build personalization instructions
-        personalization = ""
-        if user_context:
-            personalization = "\n\nPersonalization Context:"
-            personalization += f"\n- User's software level: {user_context.get('software_level', 'Unknown')}"
-            personalization += f"\n- Programming experience: {', '.join(user_context.get('languages_known', [])) or 'Not specified'}"
-            personalization += f"\n- AI/ML experience: {user_context.get('ai_experience', 'Unknown')}"
-            if user_context.get('gpu_available'):
-                personalization += f"\n- GPU available: {user_context['gpu_available']}"
-            if user_context.get('learning_goals'):
-                personalization += f"\n- Learning goals: {user_context['learning_goals']}"
-
-            personalization += "\n\nAdjust your explanation difficulty, code examples, and recommendations based on the user's background."
-
         # Build context from chunks
         if selected_text:
             context = f"Selected Text:\n{selected_text}\n\n"
@@ -272,7 +241,6 @@ class RAGService:
                 "Answer questions STRICTLY based on the selected text provided. "
                 "If the answer cannot be found in the selected text, say so explicitly. "
                 "Always cite the relevant parts of the selected text in your answer."
-                + personalization
             )
         else:
             context = "Context from the book:\n\n"
@@ -287,7 +255,6 @@ class RAGService:
                 "If the answer cannot be found in the provided context, say so explicitly. "
                 "Always cite the relevant source numbers (e.g., [Source 1]) when answering. "
                 "Do not make up information or use knowledge outside the provided context."
-                + personalization
             )
 
         # Generate answer using OpenAI
@@ -304,45 +271,19 @@ class RAGService:
 
         return response.choices[0].message.content
 
-    def answer_with_selected_text(
-        self,
-        query: str,
-        selected_text: str,
-        user_context: Optional[Dict[str, Any]] = None
-    ) -> Dict[str, Any]:
+    def answer_with_selected_text(self, query: str, selected_text: str) -> Dict[str, Any]:
         """
         Answer question based strictly on selected text.
 
         Args:
             query: User query
             selected_text: Selected text from the book
-            user_context: Optional user profile for personalization
 
         Returns:
             Answer and metadata
         """
-        # Demo mode - return mock response
-        if self.demo_mode:
-            answer = f"""Based on the selected text, here's a demo response to your question: "{query}"
-
-Selected text preview: {selected_text[:100]}{'...' if len(selected_text) > 100 else ''}
-
-[This is a DEMO response - OpenAI integration is not active. In full mode, this would provide an AI-generated answer based strictly on your selected text.]"""
-            return {
-                "answer": answer,
-                "sources": [{
-                    "type": "selected_text",
-                    "text": selected_text[:200] + "..." if len(selected_text) > 200 else selected_text,
-                }],
-            }
-
-        # Generate answer directly from selected text with personalization
-        answer = self.generate_answer(
-            query,
-            [],
-            selected_text=selected_text,
-            user_context=user_context
-        )
+        # Generate answer directly from selected text
+        answer = self.generate_answer(query, [], selected_text=selected_text)
 
         return {
             "answer": answer,
@@ -352,27 +293,17 @@ Selected text preview: {selected_text[:100]}{'...' if len(selected_text) > 100 e
             }],
         }
 
-    def answer_with_retrieval(
-        self,
-        query: str,
-        max_results: int = 5,
-        user_context: Optional[Dict[str, Any]] = None
-    ) -> Dict[str, Any]:
+    def answer_with_retrieval(self, query: str, max_results: int = 5) -> Dict[str, Any]:
         """
         Answer question using RAG retrieval from entire book.
 
         Args:
             query: User query
             max_results: Maximum number of chunks to retrieve
-            user_context: Optional user profile for personalization
 
         Returns:
             Answer and sources
         """
-        # Demo mode - return mock responses
-        if self.demo_mode:
-            return self._demo_answer(query)
-
         # Retrieve relevant chunks
         chunks = self.retrieve_relevant_chunks(query, max_results=max_results)
 
@@ -382,8 +313,8 @@ Selected text preview: {selected_text[:100]}{'...' if len(selected_text) > 100 e
                 "sources": [],
             }
 
-        # Generate answer with personalization
-        answer = self.generate_answer(query, chunks, user_context=user_context)
+        # Generate answer
+        answer = self.generate_answer(query, chunks)
 
         # Format sources
         sources = [
@@ -396,89 +327,6 @@ Selected text preview: {selected_text[:100]}{'...' if len(selected_text) > 100 e
             }
             for chunk in chunks
         ]
-
-        return {
-            "answer": answer,
-            "sources": sources,
-        }
-
-    def _demo_answer(self, query: str) -> Dict[str, Any]:
-        """
-        Generate demo responses without calling OpenAI.
-
-        Args:
-            query: User query
-
-        Returns:
-            Demo answer and sources
-        """
-        # Contextual demo responses based on query keywords
-        query_lower = query.lower()
-
-        if any(word in query_lower for word in ['robot', 'humanoid', 'physical ai']):
-            answer = """Physical AI and humanoid robotics represent the convergence of artificial intelligence with physical embodiment.
-
-Key aspects include:
-- Embodied intelligence that can interact with the real world
-- Humanoid robots designed to navigate human environments
-- Integration of perception, reasoning, and action
-- Applications in manufacturing, healthcare, and service industries
-
-[This is a DEMO response - OpenAI integration is not active]"""
-            sources = [
-                {
-                    "text": "Physical AI combines artificial intelligence with robotics to create systems that can perceive and interact with the physical world...",
-                    "score": 0.95,
-                    "module": "module-0-foundations",
-                    "chapter": "ch01-intro-physical-ai",
-                },
-                {
-                    "text": "Humanoid robots are designed to mimic human form and function, making them well-suited for human environments...",
-                    "score": 0.89,
-                    "module": "module-0-foundations",
-                    "chapter": "ch03-humanoid-landscape",
-                }
-            ]
-        elif any(word in query_lower for word in ['ros', 'ros2']):
-            answer = """ROS 2 (Robot Operating System 2) is a flexible framework for writing robot software. It provides:
-
-- Communication infrastructure (nodes, topics, services, actions)
-- Hardware abstraction and device drivers
-- Package management and build system
-- Tools for visualization and debugging
-
-ROS 2 improvements over ROS 1 include real-time capabilities, better security, and multi-platform support.
-
-[This is a DEMO response - OpenAI integration is not active]"""
-            sources = [
-                {
-                    "text": "ROS 2 is the next generation of the Robot Operating System, providing a middleware framework for robot development...",
-                    "score": 0.93,
-                    "module": "module-1-ros2",
-                    "chapter": "ch04-ros2-setup",
-                }
-            ]
-        else:
-            answer = f"""Thank you for your question about: "{query}"
-
-This is a DEMO MODE response. The chatbot is currently running without OpenAI integration.
-
-To enable full AI-powered responses:
-1. Add OpenAI API credits to your account
-2. Ensure the API key in .env has sufficient quota
-3. Restart the backend server
-
-In demo mode, the chatbot can show you how the interface works, but responses are pre-programmed examples rather than AI-generated content from the Physical AI book.
-
-[This is a DEMO response - OpenAI integration is not active]"""
-            sources = [
-                {
-                    "text": "Demo source content - this would normally contain relevant excerpts from the Physical AI book...",
-                    "score": 0.85,
-                    "module": "demo-module",
-                    "chapter": "demo-chapter",
-                }
-            ]
 
         return {
             "answer": answer,
