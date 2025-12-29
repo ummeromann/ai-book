@@ -4,8 +4,8 @@
   "private": true,
   "scripts": {
     "docusaurus": "docusaurus",
-    "start": "docusaurus start",
-    "build": "docusaurus build",
+    "start": "cross-env NODE_OPTIONS=--max_old_space_size=8192 docusaurus start",
+    "build": "cross-env NODE_OPTIONS=--max_old_space_size=8192 docusaurus build",
     "swizzle": "docusaurus swizzle",
     "deploy": "docusaurus deploy",
     "clear": "docusaurus clear",
@@ -26,6 +26,7 @@
     "@docusaurus/module-type-aliases": "^3.6.0",
     "@docusaurus/theme-mermaid": "^3.6.0",
     "@docusaurus/types": "^3.6.0",
+    "cross-env": "^10.1.0",
     "typescript": "~5.3.3"
   },
   "browserslist": {
