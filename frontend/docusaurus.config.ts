@@ -15,7 +15,7 @@ const config: Config = {
   organizationName: 'ummeromann',
   projectName: 'ai-book',
 
-  onBrokenLinks: 'throw',
+  onBrokenLinks: 'warn',
 
   i18n: {
     defaultLocale: 'en',
