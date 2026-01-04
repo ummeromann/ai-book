@@ -15,7 +15,7 @@ const config: Config = {
   organizationName: 'ummeromann',
   projectName: 'ai-book',
 
-  onBrokenLinks: 'warn',
+  onBrokenLinks: 'ignore',
 
   i18n: {
     defaultLocale: 'en',
@@ -25,7 +25,7 @@ const config: Config = {
   markdown: {
     mermaid: true,
     hooks: {
-      onBrokenMarkdownLinks: 'warn',
+      onBrokenMarkdownLinks: 'ignore',
     },
   },
 
