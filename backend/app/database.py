@@ -28,7 +28,7 @@ class ChatMessage(Base):
     session_id = Column(String(255), index=True)
     role = Column(String(50))  # 'user' or 'assistant'
     content = Column(Text)
-    metadata = Column(JSON, nullable=True)  # Store context chunks, selected text, etc.
+    message_metadata = Column(JSON, nullable=True)  # Store context chunks, selected text, etc.
     created_at = Column(DateTime, default=datetime.utcnow)
 
 
@@ -44,11 +44,32 @@ class BookContent(Base):
     chapter = Column(String(100), nullable=True)
     content_hash = Column(String(64))  # SHA-256 hash for change detection
     ingested_at = Column(DateTime, default=datetime.utcnow)
-    metadata = Column(JSON, nullable=True)
+    content_metadata = Column(JSON, nullable=True)
 
 
 # Database engine and session
-engine = create_engine(settings.database_url)
+# Configure connection arguments for Neon with proper SSL handling for psycopg3
+connect_args = {}
+if "neon.tech" in settings.database_url:
+    connect_args = {
+        "connect_timeout": 10,
+        "options": "-c timezone=utc",
+        # Disable SSL verification for pooled connections (Neon specific)
+        "sslmode": "require",
+        "keepalives": 1,
+        "keepalives_idle": 30,
+        "keepalives_interval": 10,
+        "keepalives_count": 5,
+    }
+
+engine = create_engine(
+    settings.database_url,
+    connect_args=connect_args,
+    pool_pre_ping=True,  # Verify connections before using them
+    pool_recycle=300,  # Recycle connections after 5 minutes
+    pool_size=5,  # Reduce pool size for better connection management
+    max_overflow=10,
+)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 

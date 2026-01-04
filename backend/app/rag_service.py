@@ -7,8 +7,9 @@ from pathlib import Path
 from openai import OpenAI
 from qdrant_client import QdrantClient
 from qdrant_client.models import Distance, VectorParams, PointStruct, Filter, FieldCondition, MatchValue
-from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 from sqlalchemy.orm import Session
+from sentence_transformers import SentenceTransformer
 
 from app.config import settings
 from app.database import BookContent
@@ -20,6 +21,21 @@ class RAGService:
     def __init__(self):
         """Initialize RAG service with Qdrant and OpenAI clients."""
         self.openai_client = OpenAI(api_key=settings.openai_api_key)
+
+        # Initialize OpenRouter client as fallback
+        self.openrouter_client = None
+        if settings.use_fallback and settings.openrouter_api_key:
+            self.openrouter_client = OpenAI(
+                api_key=settings.openrouter_api_key,
+                base_url="https://openrouter.ai/api/v1"
+            )
+
+        # Initialize local embedding model as fallback (free!)
+        print("Loading local embedding model (all-MiniLM-L6-v2)...", flush=True)
+        self.local_embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
+        self.embedding_dimension = 384  # Dimension for all-MiniLM-L6-v2
+        print("Local embedding model loaded successfully!", flush=True)
+
         self.qdrant_client = QdrantClient(
             url=settings.qdrant_url,
             api_key=settings.qdrant_api_key,
@@ -38,19 +54,27 @@ class RAGService:
         collection_names = [col.name for col in collections]
 
         if self.collection_name not in collection_names:
-            # Create collection with embedding dimension (1536 for text-embedding-3-small)
+            # Create collection with embedding dimension (384 for all-MiniLM-L6-v2)
             self.qdrant_client.create_collection(
                 collection_name=self.collection_name,
-                vectors_config=VectorParams(size=1536, distance=Distance.COSINE),
+                vectors_config=VectorParams(size=self.embedding_dimension, distance=Distance.COSINE),
             )
+            print(f"Created collection '{self.collection_name}' with dimension {self.embedding_dimension}", flush=True)
 
     def _get_embedding(self, text: str) -> List[float]:
-        """Generate embedding for given text using OpenAI."""
-        response = self.openai_client.embeddings.create(
-            model=settings.embedding_model,
-            input=text
-        )
-        return response.data[0].embedding
+        """Generate embedding for given text using OpenAI with local fallback."""
+        try:
+            response = self.openai_client.embeddings.create(
+                model=settings.embedding_model,
+                input=text
+            )
+            return response.data[0].embedding
+        except Exception as e:
+            print(f"OpenAI embedding failed: {e}", flush=True)
+            print("Using local embedding model (all-MiniLM-L6-v2) as fallback...", flush=True)
+            # Use local sentence-transformers model as fallback (free!)
+            embedding = self.local_embedding_model.encode(text, convert_to_tensor=False)
+            return embedding.tolist()
 
     def _compute_content_hash(self, content: str) -> str:
         """Compute SHA-256 hash of content."""
@@ -132,7 +156,7 @@ class RAGService:
             # Update or create database entry
             if existing_entry:
                 existing_entry.content_hash = content_hash
-                existing_entry.metadata = metadata
+                existing_entry.content_metadata = metadata
             else:
                 new_entry = BookContent(
                     file_path=str(md_file),
@@ -140,7 +164,7 @@ class RAGService:
                     module=metadata.get("module"),
                     chapter=metadata.get("chapter"),
                     content_hash=content_hash,
-                    metadata=metadata,
+                    content_metadata=metadata,
                 )
                 db.add(new_entry)
 
@@ -257,19 +281,34 @@ class RAGService:
                 "Do not make up information or use knowledge outside the provided context."
             )
 
-        # Generate answer using OpenAI
+        # Generate answer using OpenAI with fallback to OpenRouter
         messages = [
             {"role": "system", "content": system_message},
             {"role": "user", "content": f"{context}\n\nQuestion: {query}"}
         ]
 
-        response = self.openai_client.chat.completions.create(
-            model=settings.chat_model,
-            messages=messages,
-            temperature=0.3,  # Lower temperature for more factual responses
-        )
-
-        return response.choices[0].message.content
+        try:
+            response = self.openai_client.chat.completions.create(
+                model=settings.chat_model,
+                messages=messages,
+                temperature=0.3,  # Lower temperature for more factual responses
+            )
+            return response.choices[0].message.content
+        except Exception as e:
+            print(f"OpenAI chat completion failed: {e}", flush=True)
+            # Fallback to OpenRouter with Gemini
+            if self.openrouter_client:
+                try:
+                    response = self.openrouter_client.chat.completions.create(
+                        model=settings.openrouter_chat_model,
+                        messages=messages,
+                        temperature=0.3,
+                    )
+                    return response.choices[0].message.content
+                except Exception as fallback_error:
+                    print(f"OpenRouter fallback also failed: {fallback_error}", flush=True)
+                    raise Exception(f"Both OpenAI and OpenRouter failed. OpenAI: {e}, OpenRouter: {fallback_error}")
+            raise
 
     def answer_with_selected_text(self, query: str, selected_text: str) -> Dict[str, Any]:
         """
@@ -304,12 +343,42 @@ class RAGService:
         Returns:
             Answer and sources
         """
-        # Retrieve relevant chunks
-        chunks = self.retrieve_relevant_chunks(query, max_results=max_results)
+        # Try to retrieve relevant chunks
+        try:
+            chunks = self.retrieve_relevant_chunks(query, max_results=max_results)
+        except Exception as e:
+            print(f"Retrieval failed: {e}", flush=True)
+            # If retrieval fails (e.g., embedding fails), answer without context using fallback
+            chunks = []
 
         if not chunks:
+            # If no chunks found or retrieval failed, answer without RAG context
+            if self.openrouter_client:
+                # Use OpenRouter to answer without RAG context
+                try:
+                    system_message = (
+                        "You are a helpful AI assistant. "
+                        "Answer the user's question to the best of your ability. "
+                        "Be honest if you don't have specific information."
+                    )
+                    messages = [
+                        {"role": "system", "content": system_message},
+                        {"role": "user", "content": query}
+                    ]
+                    response = self.openrouter_client.chat.completions.create(
+                        model=settings.openrouter_chat_model,
+                        messages=messages,
+                        temperature=0.7,
+                    )
+                    return {
+                        "answer": response.choices[0].message.content,
+                        "sources": [],
+                    }
+                except Exception as fallback_error:
+                    print(f"OpenRouter fallback failed: {fallback_error}", flush=True)
+
             return {
-                "answer": "I couldn't find relevant information in the book to answer your question.",
+                "answer": "I couldn't find relevant information in the book to answer your question, and fallback is unavailable.",
                 "sources": [],
             }
 

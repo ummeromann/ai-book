@@ -11,6 +11,12 @@ class Settings(BaseSettings):
     embedding_model: str = "text-embedding-3-small"
     chat_model: str = "gpt-4-turbo-preview"
 
+    # OpenRouter (Fallback)
+    openrouter_api_key: str = ""
+    use_fallback: bool = True
+    openrouter_chat_model: str = "google/gemini-2.0-flash-exp:free"
+    openrouter_embedding_model: str = "google/gemini-2.0-flash-exp:free"
+
     # Qdrant
     qdrant_url: str
     qdrant_api_key: str

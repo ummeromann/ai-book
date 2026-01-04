@@ -165,7 +165,7 @@ async def chat(
             session_id=session_id,
             role="assistant",
             content=result["answer"],
-            metadata={"sources": result["sources"]},
+            message_metadata={"sources": result["sources"]},
         )
         db.add(assistant_message)
 
@@ -214,7 +214,7 @@ async def chat_selected_text(
             session_id=session_id,
             role="user",
             content=request.query,
-            metadata={"selected_text": request.selected_text},
+            message_metadata={"selected_text": request.selected_text},
         )
         db.add(user_message)
 
@@ -229,7 +229,7 @@ async def chat_selected_text(
             session_id=session_id,
             role="assistant",
             content=result["answer"],
-            metadata={"sources": result["sources"], "mode": "selected_text"},
+            message_metadata={"sources": result["sources"], "mode": "selected_text"},
         )
         db.add(assistant_message)
 
@@ -267,9 +267,32 @@ async def get_session_history(
             {
                 "role": msg.role,
                 "content": msg.content,
-                "metadata": msg.metadata,
+                "metadata": msg.message_metadata,
                 "created_at": msg.created_at.isoformat(),
             }
             for msg in messages
         ],
     }
+
+
+@app.get("/debug/config", tags=["Debug"])
+async def debug_config():
+    """Check current configuration."""
+    return {
+        "openrouter_chat_model": settings.openrouter_chat_model,
+        "use_fallback": settings.use_fallback,
+        "has_openrouter_key": bool(settings.openrouter_api_key),
+        "has_openrouter_client": rag_service.openrouter_client is not None,
+    }
+
+@app.get("/debug/test-openrouter", tags=["Debug"])
+async def test_openrouter():
+    """Test OpenRouter connection directly."""
+    try:
+        result = rag_service.answer_with_retrieval(
+            query="Say 'Hello from OpenRouter!'",
+            max_results=1
+        )
+        return {"status": "success", "result": result}
+    except Exception as e:
+        return {"status": "error", "error": str(e)}

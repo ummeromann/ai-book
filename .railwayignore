@@ -1,7 +1,0 @@
-frontend/
-node_modules/
-.git/
-*.log
-.env.example
-*.md
-!backend/
